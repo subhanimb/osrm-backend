@@ -41,13 +41,15 @@ function segment_function (source, target, distance, weight)
   local targetData = sources:interpolate(raster_source, target.lon, target.lat)
   io.write("evaluating segment: " .. sourceData.datum .. " " .. targetData.datum .. "\n")
   local invalid = sourceData.invalid_data()
+  local scaled_weight = weight
 
   if sourceData.datum ~= invalid and targetData.datum ~= invalid then
     local slope = math.abs(sourceData.datum - targetData.datum) / distance
     io.write("   slope: " .. slope .. "\n")
-    io.write("   was speed: " .. weight.speed .. "\n")
+    io.write("   was speed: " .. weight .. "\n")
 
-    weight.speed = weight.speed * (1 - (slope * 5))
-    io.write("   new speed: " .. weight.speed .. "\n")
+    scaled_weight = scaled_weight / (1 - (slope * 5))
+    io.write("   new speed: " .. scaled_weight .. "\n")
   end
+  return scaled_weight
 end

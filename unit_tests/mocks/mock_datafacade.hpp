@@ -66,6 +66,14 @@ class MockDataFacade final : public engine::datafacade::BaseDataFacade
     {
         return GeometryID{SPECIAL_GEOMETRYID, false};
     }
+    TurnPenalty GetWeightPenaltyForEdgeID(const unsigned /* id */) const override final
+    {
+        return 0;
+    }
+    TurnPenalty GetDurationPenaltyForEdgeID(const unsigned /* id */) const override final
+    {
+        return 0;
+    }
     std::vector<NodeID> GetUncompressedForwardGeometry(const EdgeID /* id */) const override
     {
         return {};
@@ -81,12 +89,17 @@ class MockDataFacade final : public engine::datafacade::BaseDataFacade
         result_weights[0] = 1;
         return result_weights;
     }
-    std::vector<EdgeWeight> GetUncompressedReverseWeights(const EdgeID /* id */) const override
+    std::vector<EdgeWeight> GetUncompressedReverseWeights(const EdgeID id) const override
     {
-        std::vector<EdgeWeight> result_weights;
-        result_weights.resize(1);
-        result_weights[0] = 1;
-        return result_weights;
+        return GetUncompressedForwardWeights(id);
+    }
+    std::vector<EdgeWeight> GetUncompressedForwardDurations(const EdgeID id) const override
+    {
+        return GetUncompressedForwardWeights(id);
+    }
+    std::vector<EdgeWeight> GetUncompressedReverseDurations(const EdgeID id) const override
+    {
+        return GetUncompressedForwardWeights(id);
     }
     std::vector<uint8_t> GetUncompressedForwardDatasources(const EdgeID /*id*/) const override
     {
@@ -206,7 +219,8 @@ class MockDataFacade final : public engine::datafacade::BaseDataFacade
     std::size_t GetCoreSize() const override { return 0; }
     std::string GetTimestamp() const override { return ""; }
     bool GetContinueStraightDefault() const override { return true; }
-    BearingClassID GetBearingClassID(const NodeID /*id*/) const override { return 0; }
+    const char *GetWeightName() const override final { return "duration"; }
+    BearingClassID GetBearingClassID(const NodeID /*id*/) const override { return 0; };
     EntryClassID GetEntryClassID(const EdgeID /*id*/) const override { return 0; }
 
     util::guidance::TurnBearing PreTurnBearing(const EdgeID /*eid*/) const override final

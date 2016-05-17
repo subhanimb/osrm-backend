@@ -55,11 +55,11 @@ class LuaScriptingEnvironment final : public ScriptingEnvironment
     std::vector<std::string> GetNameSuffixList() override;
     std::vector<std::string> GetRestrictions() override;
     void SetupSources() override;
-    int32_t GetTurnPenalty(double angle) override;
-    void ProcessSegment(const osrm::util::Coordinate &source,
-                        const osrm::util::Coordinate &target,
-                        double distance,
-                        InternalExtractorEdge::WeightData &weight) override;
+    void ProcessTurn(ExtractionTurn &turn) override;
+    double ProcessSegment(const osrm::util::Coordinate &source,
+                          const osrm::util::Coordinate &target,
+                          double distance,
+                          double weight) override;
     void
     ProcessElements(const std::vector<osmium::memory::Buffer::const_iterator> &osm_elements,
                     const RestrictionParser &restriction_parser,

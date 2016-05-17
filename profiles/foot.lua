@@ -68,6 +68,7 @@ properties.traffic_signal_penalty        = 2
 properties.u_turn_penalty                = 2
 properties.use_turn_restrictions         = false
 properties.continue_straight_at_waypoint = false
+properties.weight_name                   = 'duration'
 
 local fallback_names     = true
 

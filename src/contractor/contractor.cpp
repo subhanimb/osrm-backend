@@ -3,7 +3,7 @@
 #include "contractor/graph_contractor.hpp"
 
 #include "extractor/compressed_edge_container.hpp"
-#include "extractor/edge_based_graph_factory.hpp"
+#include "extractor/io.hpp"
 #include "extractor/node_based_edge.hpp"
 
 #include "util/exception.hpp"
@@ -17,6 +17,7 @@
 #include "util/timing_util.hpp"
 #include "util/typedefs.hpp"
 
+#include <boost/algorithm/clamp.hpp>
 #include <boost/assert.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/functional/hash.hpp>
@@ -118,15 +119,6 @@ EdgeWeight getNewWeight(IterType speed_iter,
 
 int Contractor::Run()
 {
-#ifdef WIN32
-#pragma message("Memory consumption on Windows can be higher due to different bit packing")
-#else
-    static_assert(sizeof(extractor::NodeBasedEdge) == 24,
-                  "changing extractor::NodeBasedEdge type has influence on memory consumption!");
-    static_assert(sizeof(extractor::EdgeBasedEdge) == 16,
-                  "changing EdgeBasedEdge type has influence on memory consumption!");
-#endif
-
     if (config.core_factor > 1.0 || config.core_factor < 0)
     {
         throw util::exception("Core factor must be between 0.0 to 1.0 (inclusive)");
@@ -141,7 +133,9 @@ int Contractor::Run()
     EdgeID max_edge_id = LoadEdgeExpandedGraph(config.edge_based_graph_path,
                                                edge_based_edge_list,
                                                config.edge_segment_lookup_path,
-                                               config.edge_penalty_path,
+                                               config.turn_weight_penalties_path,
+                                               config.turn_duration_penalties_path,
+                                               config.turn_penalties_index_path,
                                                config.segment_speed_lookup_paths,
                                                config.turn_penalty_lookup_paths,
                                                config.node_based_graph_path,
@@ -399,7 +393,9 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
     std::string const &edge_based_graph_filename,
     util::DeallocatingVector<extractor::EdgeBasedEdge> &edge_based_edge_list,
     const std::string &edge_segment_lookup_filename,
-    const std::string &edge_penalty_filename,
+    const std::string &turn_weight_penalties_filename,
+    const std::string &turn_duration_penalties_filename,
+    const std::string &turn_penalties_index_filename,
     const std::vector<std::string> &segment_speed_filenames,
     const std::vector<std::string> &turn_penalty_filenames,
     const std::string &nodes_filename,
@@ -414,26 +410,40 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
 
     util::SimpleLogger().Write() << "Opening " << edge_based_graph_filename;
 
-    auto mmap_file = [](const std::string &filename) {
+    auto mmap_file = [](const std::string &filename, boost::interprocess::mode_t mode) {
         using boost::interprocess::file_mapping;
         using boost::interprocess::mapped_region;
-        using boost::interprocess::read_only;
 
-        const file_mapping mapping{filename.c_str(), read_only};
-        mapped_region region{mapping, read_only};
+        const file_mapping mapping{filename.c_str(), mode};
+        mapped_region region{mapping, mode};
         region.advise(mapped_region::advice_sequential);
         return region;
     };
 
-    const auto edge_based_graph_region = mmap_file(edge_based_graph_filename);
+    const auto edge_based_graph_region =
+        mmap_file(edge_based_graph_filename, boost::interprocess::read_only);
 
     const bool update_edge_weights = !segment_speed_filenames.empty();
     const bool update_turn_penalties = !turn_penalty_filenames.empty();
 
-    const auto edge_penalty_region = [&] {
+    const auto turn_weight_penalties_region = [&] {
         if (update_edge_weights || update_turn_penalties)
         {
-            return mmap_file(edge_penalty_filename);
+            return mmap_file(turn_weight_penalties_filename, boost::interprocess::read_write);
+        }
+        return boost::interprocess::mapped_region();
+    }();
+    const auto turn_duration_penalties_region = [&] {
+        if (update_edge_weights || update_turn_penalties)
+        {
+            return mmap_file(turn_duration_penalties_filename, boost::interprocess::read_only);
+        }
+        return boost::interprocess::mapped_region();
+    }();
+    const auto turn_penalties_index_region = [&] {
+        if (update_edge_weights || update_turn_penalties)
+        {
+            return mmap_file(turn_penalties_index_filename, boost::interprocess::read_only);
         }
         return boost::interprocess::mapped_region();
     }();
@@ -441,32 +451,19 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
     const auto edge_segment_region = [&] {
         if (update_edge_weights || update_turn_penalties)
         {
-            return mmap_file(edge_segment_lookup_filename);
+            return mmap_file(edge_segment_lookup_filename, boost::interprocess::read_only);
         }
         return boost::interprocess::mapped_region();
     }();
 
-// Set the struct packing to 1 byte word sizes.  This prevents any padding.  We only use
-// this struct once, so any alignment penalty is trivial.  If this is *not* done, then
-// the struct will be padded out by an extra 4 bytes, and sizeof() will mean we read
-// too much data from the original file.
-#pragma pack(push, r1, 1)
-    struct EdgeBasedGraphHeader
-    {
-        util::FingerPrint fingerprint;
-        std::uint64_t number_of_edges;
-        EdgeID max_edge_id;
-    };
-#pragma pack(pop, r1)
-
-    const EdgeBasedGraphHeader graph_header =
-        *(reinterpret_cast<const EdgeBasedGraphHeader *>(edge_based_graph_region.get_address()));
+    auto graph_header = reinterpret_cast<const extractor::io::EdgeBasedGraphHeader *>(
+        edge_based_graph_region.get_address());
 
     const util::FingerPrint fingerprint_valid = util::FingerPrint::GetValid();
-    graph_header.fingerprint.TestContractor(fingerprint_valid);
+    graph_header->fingerprint.TestContractor(fingerprint_valid);
 
-    edge_based_edge_list.resize(graph_header.number_of_edges);
-    util::SimpleLogger().Write() << "Reading " << graph_header.number_of_edges
+    edge_based_edge_list.resize(graph_header->number_of_edges);
+    util::SimpleLogger().Write() << "Reading " << graph_header->number_of_edges
                                  << " edges from the edge based graph";
 
     SegmentSpeedSourceFlatMap segment_speed_lookup;
@@ -579,7 +576,7 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
 
         using boost::interprocess::mapped_region;
 
-        auto region = mmap_file(rtree_leaf_filename.c_str());
+        auto region = mmap_file(rtree_leaf_filename.c_str(), boost::interprocess::read_only);
         region.advise(mapped_region::advice_willneed);
 
         const auto bytes = region.get_size();
@@ -754,17 +751,23 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
 
     tbb::parallel_invoke(maybe_save_geometries, save_datasource_indexes, save_datastore_names);
 
-    auto penaltyblock = reinterpret_cast<const extractor::lookup::PenaltyBlock *>(
-        edge_penalty_region.get_address());
+    auto turn_weight_penalty_ptr = reinterpret_cast<TurnPenalty *>(
+        reinterpret_cast<char *>(turn_weight_penalties_region.get_address()) +
+        sizeof(extractor::io::TurnPenaltiesHeader));
+    // TODO MKR auto turn_duration_penalty_ptr = reinterpret_cast<TurnPenalty *>(
+    //     reinterpret_cast<char *>(turn_duration_penalties_region.get_address()) +
+    //     sizeof(extractor::io::TurnPenaltiesHeader));
+    auto turn_index_block_ptr = reinterpret_cast<const extractor::io::TurnIndexBlock *>(
+        turn_penalties_index_region.get_address());
     auto edge_segment_byte_ptr = reinterpret_cast<const char *>(edge_segment_region.get_address());
     auto edge_based_edge_ptr = reinterpret_cast<extractor::EdgeBasedEdge *>(
         reinterpret_cast<char *>(edge_based_graph_region.get_address()) +
-        sizeof(EdgeBasedGraphHeader));
+        sizeof(extractor::io::EdgeBasedGraphHeader));
 
     const auto edge_based_edge_last = reinterpret_cast<extractor::EdgeBasedEdge *>(
         reinterpret_cast<char *>(edge_based_graph_region.get_address()) +
-        sizeof(EdgeBasedGraphHeader) +
-        sizeof(extractor::EdgeBasedEdge) * graph_header.number_of_edges);
+        sizeof(extractor::io::EdgeBasedGraphHeader) +
+        sizeof(extractor::EdgeBasedEdge) * graph_header->number_of_edges);
 
     while (edge_based_edge_ptr != edge_based_edge_last)
     {
@@ -775,18 +778,18 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
         if (update_edge_weights || update_turn_penalties)
         {
             bool skip_this_edge = false;
-            auto header = reinterpret_cast<const extractor::lookup::SegmentHeaderBlock *>(
-                edge_segment_byte_ptr);
-            edge_segment_byte_ptr += sizeof(extractor::lookup::SegmentHeaderBlock);
+            auto header =
+                reinterpret_cast<const extractor::io::SegmentHeaderBlock *>(edge_segment_byte_ptr);
+            edge_segment_byte_ptr += sizeof(extractor::io::SegmentHeaderBlock);
 
             auto previous_osm_node_id = header->previous_osm_node_id;
             EdgeWeight new_weight = 0;
             int compressed_edge_nodes = static_cast<int>(header->num_osm_nodes);
 
             auto segmentblocks =
-                reinterpret_cast<const extractor::lookup::SegmentBlock *>(edge_segment_byte_ptr);
+                reinterpret_cast<const extractor::io::SegmentBlock *>(edge_segment_byte_ptr);
             edge_segment_byte_ptr +=
-                sizeof(extractor::lookup::SegmentBlock) * (header->num_osm_nodes - 1);
+                sizeof(extractor::io::SegmentBlock) * (header->num_osm_nodes - 1);
 
             const auto num_segments = header->num_osm_nodes - 1;
             for (auto i : util::irange<std::size_t>(0, num_segments))
@@ -825,41 +828,56 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
             // effectively removes it from the routing network.
             if (skip_this_edge)
             {
-                penaltyblock++;
+                turn_index_block_ptr++;
+                turn_weight_penalty_ptr++;
+                // TODO MKR turn_duration_penalty_ptr++;
                 continue;
             }
 
-            const auto turn_iter = turn_penalty_lookup.find(
-                std::make_tuple(penaltyblock->from_id, penaltyblock->via_id, penaltyblock->to_id));
+            auto turn_weight_penalty = *turn_weight_penalty_ptr;
+            // TODO MKR auto turn_duration_penalty = *turn_duration_penalty_ptr;
+
+            const auto turn_iter =
+                turn_penalty_lookup.find(std::make_tuple(turn_index_block_ptr->from_id,
+                                                         turn_index_block_ptr->via_id,
+                                                         turn_index_block_ptr->to_id));
             if (turn_iter != turn_penalty_lookup.end())
             {
-                int new_turn_weight = static_cast<int>(turn_iter->second.first * 10);
-
-                if (new_turn_weight + new_weight < compressed_edge_nodes)
+                auto turn_weight_penalty_100ms = turn_iter->second.first * 10;
+                if (turn_weight_penalty_100ms + new_weight < compressed_edge_nodes)
                 {
                     util::SimpleLogger().Write(logWARNING)
                         << "turn penalty " << turn_iter->second.first << " for turn "
-                        << penaltyblock->from_id << ", " << penaltyblock->via_id << ", "
-                        << penaltyblock->to_id << " is too negative: clamping turn weight to "
-                        << compressed_edge_nodes;
+                        << turn_index_block_ptr->from_id << ", " << turn_index_block_ptr->via_id
+                        << ", " << turn_index_block_ptr->to_id
+                        << " is too negative: clamping turn weight to "
+                        << (compressed_edge_nodes - new_weight);
+
+                    turn_weight_penalty =
+                        boost::numeric_cast<TurnPenalty>(compressed_edge_nodes - new_weight);
                 }
-
-                inbuffer.weight = std::max(new_turn_weight + new_weight, compressed_edge_nodes);
+                else
+                {
+                    turn_weight_penalty =
+                        boost::numeric_cast<TurnPenalty>(turn_weight_penalty_100ms);
+                }
             }
-            else
-            {
-                inbuffer.weight = penaltyblock->fixed_penalty + new_weight;
-            }
 
-            // Increment the pointer
-            penaltyblock++;
+            inbuffer.weight = turn_weight_penalty + new_weight;
+            // FIXME update the turn penalty
+            *turn_weight_penalty_ptr = turn_weight_penalty;
+
+            // Increment pointers
+            turn_index_block_ptr++;
+            turn_weight_penalty_ptr++;
+            // TODO MKR turn_duration_penalty_ptr++;
         }
 
         edge_based_edge_list.emplace_back(std::move(inbuffer));
     }
 
     util::SimpleLogger().Write() << "Done reading edges";
-    return graph_header.max_edge_id;
+    return graph_header->max_edge_id;
 }
 
 void Contractor::ReadNodeLevels(std::vector<float> &node_levels) const
