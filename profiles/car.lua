@@ -417,6 +417,10 @@ function way_function (way, result)
     result.forward_speed = math.min(surface_speeds[surface], result.forward_speed)
     result.backward_speed = math.min(surface_speeds[surface], result.backward_speed)
   end
+  if tracktype and tracktype_speeds[tracktype] then
+    result.forward_speed = math.min(tracktype_speeds[tracktype], result.forward_speed)
+    result.backward_speed = math.min(tracktype_speeds[tracktype], result.backward_speed)
+  end
   if smoothness and smoothness_speeds[smoothness] then
     result.forward_speed = math.min(smoothness_speeds[smoothness], result.forward_speed)
     result.backward_speed = math.min(smoothness_speeds[smoothness], result.backward_speed)

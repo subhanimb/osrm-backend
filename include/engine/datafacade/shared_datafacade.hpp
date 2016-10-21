@@ -509,6 +509,7 @@ class SharedDataFacade final : public BaseDataFacade
         LoadGraph();
         LoadChecksum();
         LoadNodeAndEdgeInformation();
+        LoadTurnPenalties();
         LoadGeometries();
         LoadTimestamp();
         LoadViaNodeList();
@@ -645,8 +646,8 @@ class SharedDataFacade final : public BaseDataFacade
         std::vector<EdgeWeight> result_durations;
         result_durations.resize(end - begin);
 
-        std::copy(m_geometry_fwd_weight_list.begin() + begin,
-                  m_geometry_fwd_weight_list.begin() + end,
+        std::copy(m_geometry_fwd_duration_list.begin() + begin,
+                  m_geometry_fwd_duration_list.begin() + end,
                   result_durations.begin());
 
         return result_durations;
@@ -693,8 +694,8 @@ class SharedDataFacade final : public BaseDataFacade
         std::vector<EdgeWeight> result_weights;
         result_weights.resize(end - begin);
 
-        std::copy(m_geometry_fwd_duration_list.begin() + begin,
-                  m_geometry_fwd_duration_list.begin() + end,
+        std::copy(m_geometry_fwd_weight_list.begin() + begin,
+                  m_geometry_fwd_weight_list.begin() + end,
                   result_weights.begin());
 
         return result_weights;
