@@ -674,25 +674,25 @@ Storage::ReturnCode Storage::Run(int max_wait)
     }
 
     EdgeWeight *geometries_fwd_duration_list_ptr = shared_layout_ptr->GetBlockPtr<EdgeWeight, true>(
-        shared_memory_ptr, SharedDataLayout::GEOMETRIES_FWD_WEIGHT_LIST);
+        shared_memory_ptr, SharedDataLayout::GEOMETRIES_FWD_DURATION_LIST);
     BOOST_ASSERT(temporary_value ==
-                 shared_layout_ptr->num_entries[SharedDataLayout::GEOMETRIES_FWD_WEIGHT_LIST]);
-    if (shared_layout_ptr->GetBlockSize(SharedDataLayout::GEOMETRIES_FWD_WEIGHT_LIST) > 0)
+                 shared_layout_ptr->num_entries[SharedDataLayout::GEOMETRIES_FWD_DURATION_LIST]);
+    if (shared_layout_ptr->GetBlockSize(SharedDataLayout::GEOMETRIES_FWD_DURATION_LIST) > 0)
     {
         geometry_input_stream.read(
             (char *)geometries_fwd_duration_list_ptr,
-            shared_layout_ptr->GetBlockSize(SharedDataLayout::GEOMETRIES_FWD_WEIGHT_LIST));
+            shared_layout_ptr->GetBlockSize(SharedDataLayout::GEOMETRIES_FWD_DURATION_LIST));
     }
 
     EdgeWeight *geometries_rev_duration_list_ptr = shared_layout_ptr->GetBlockPtr<EdgeWeight, true>(
-        shared_memory_ptr, SharedDataLayout::GEOMETRIES_REV_WEIGHT_LIST);
+        shared_memory_ptr, SharedDataLayout::GEOMETRIES_REV_DURATION_LIST);
     BOOST_ASSERT(temporary_value ==
-                 shared_layout_ptr->num_entries[SharedDataLayout::GEOMETRIES_REV_WEIGHT_LIST]);
-    if (shared_layout_ptr->GetBlockSize(SharedDataLayout::GEOMETRIES_REV_WEIGHT_LIST) > 0)
+                 shared_layout_ptr->num_entries[SharedDataLayout::GEOMETRIES_REV_DURATION_LIST]);
+    if (shared_layout_ptr->GetBlockSize(SharedDataLayout::GEOMETRIES_REV_DURATION_LIST) > 0)
     {
         geometry_input_stream.read(
             (char *)geometries_rev_duration_list_ptr,
-            shared_layout_ptr->GetBlockSize(SharedDataLayout::GEOMETRIES_REV_WEIGHT_LIST));
+            shared_layout_ptr->GetBlockSize(SharedDataLayout::GEOMETRIES_REV_DURATION_LIST));
     }
 
     // load datasource information (if it exists)
