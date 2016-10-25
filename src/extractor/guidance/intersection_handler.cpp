@@ -59,12 +59,8 @@ TurnType::Enum IntersectionHandler::findBasicTurnType(const EdgeID via_edge,
     if (!on_ramp && onto_ramp)
         return TurnType::OnRamp;
 
-    const auto same_name =
-        !util::guidance::requiresNameAnnounced(name_table.GetNameForID(in_data.name_id),
-                                               name_table.GetRefForID(in_data.name_id),
-                                               name_table.GetNameForID(out_data.name_id),
-                                               name_table.GetRefForID(out_data.name_id),
-                                               street_name_suffix_table);
+    const auto same_name = !util::guidance::requiresNameAnnounced(
+        in_data.name_id, out_data.name_id, name_table, street_name_suffix_table);
 
     if (in_data.name_id != EMPTY_NAMEID && out_data.name_id != EMPTY_NAMEID && same_name)
     {
@@ -97,11 +93,8 @@ TurnInstruction IntersectionHandler::getInstructionForObvious(const std::size_t 
         const auto &in_data = node_based_graph.GetEdgeData(via_edge);
         const auto &out_data = node_based_graph.GetEdgeData(road.turn.eid);
 
-        if (util::guidance::requiresNameAnnounced(name_table.GetNameForID(in_data.name_id),
-                                                  name_table.GetRefForID(in_data.name_id),
-                                                  name_table.GetNameForID(out_data.name_id),
-                                                  name_table.GetRefForID(out_data.name_id),
-                                                  street_name_suffix_table))
+        if (util::guidance::requiresNameAnnounced(
+                in_data.name_id, out_data.name_id, name_table, street_name_suffix_table))
         {
             // obvious turn onto a through street is a merge
             if (through_street)
@@ -373,11 +366,8 @@ bool IntersectionHandler::isThroughStreet(const std::size_t index,
 
         const bool have_same_name =
             road_data.name_id != EMPTY_NAMEID &&
-            !util::guidance::requiresNameAnnounced(name_table.GetNameForID(data_at_index.name_id),
-                                                   name_table.GetRefForID(data_at_index.name_id),
-                                                   name_table.GetNameForID(road_data.name_id),
-                                                   name_table.GetRefForID(road_data.name_id),
-                                                   street_name_suffix_table);
+            !util::guidance::requiresNameAnnounced(
+                data_at_index.name_id, road_data.name_id, name_table, street_name_suffix_table);
 
         const bool have_same_category =
             data_at_index.road_classification == road_data.road_classification;
@@ -419,12 +409,8 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
         const auto continue_class =
             node_based_graph.GetEdgeData(intersection[best_continue].turn.eid).road_classification;
 
-        const auto same_name =
-            !util::guidance::requiresNameAnnounced(name_table.GetNameForID(in_data.name_id),
-                                                   name_table.GetRefForID(in_data.name_id),
-                                                   name_table.GetNameForID(out_data.name_id),
-                                                   name_table.GetRefForID(out_data.name_id),
-                                                   street_name_suffix_table);
+        const auto same_name = !util::guidance::requiresNameAnnounced(
+            in_data.name_id, out_data.name_id, name_table, street_name_suffix_table);
 
         if (same_name && (best_continue == 0 || (continue_class.GetPriority() >
                                                      out_data.road_classification.GetPriority() &&
@@ -482,11 +468,7 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
                 const auto &road_data = node_based_graph.GetEdgeData(road.turn.eid);
 
                 const auto same_name = !util::guidance::requiresNameAnnounced(
-                    name_table.GetNameForID(in_data.name_id),
-                    name_table.GetRefForID(in_data.name_id),
-                    name_table.GetNameForID(road_data.name_id),
-                    name_table.GetRefForID(road_data.name_id),
-                    street_name_suffix_table);
+                    in_data.name_id, road_data.name_id, name_table, street_name_suffix_table);
 
                 if (same_name)
                 {
@@ -518,12 +500,11 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
                    intersection.begin() + 1, intersection.end(), [&](const ConnectedRoad &road) {
 
                        const auto &road_data = node_based_graph.GetEdgeData(road.turn.eid);
-                       const auto same_name = !util::guidance::requiresNameAnnounced(
-                           name_table.GetNameForID(in_data.name_id),
-                           name_table.GetRefForID(in_data.name_id),
-                           name_table.GetNameForID(road_data.name_id),
-                           name_table.GetRefForID(road_data.name_id),
-                           street_name_suffix_table);
+                       const auto same_name =
+                           !util::guidance::requiresNameAnnounced(in_data.name_id,
+                                                                  road_data.name_id,
+                                                                  name_table,
+                                                                  street_name_suffix_table);
 
                        return same_name &&
                               angularDeviation(road.turn.angle, STRAIGHT_ANGLE) < NARROW_TURN_ANGLE;
@@ -735,11 +716,7 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
             */
 
             const auto same_name = !util::guidance::requiresNameAnnounced(
-                name_table.GetNameForID(turn_data.name_id),
-                name_table.GetRefForID(turn_data.name_id),
-                name_table.GetNameForID(continue_data.name_id),
-                name_table.GetRefForID(continue_data.name_id),
-                street_name_suffix_table);
+                turn_data.name_id, continue_data.name_id, name_table, street_name_suffix_table);
 
             if (same_name && deviation_ratio < 1.5 * DISTINCTION_RATIO)
                 return 0;

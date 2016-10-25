@@ -128,7 +128,8 @@ bool isNoticeableNameChange(const RouteStep &lhs, const RouteStep &rhs)
 {
     // TODO: at some point we might want to think about pronunciation here.
     // Also rotary_name is not handled at the moment.
-    return util::guidance::requiresNameAnnounced(lhs.name, lhs.ref, rhs.name, rhs.ref);
+    return util::guidance::requiresNameAnnounced(
+        lhs.name, lhs.ref, lhs.pronunciation, rhs.name, rhs.ref, rhs.pronunciation);
 }
 
 double nameSegmentLength(std::size_t at, const std::vector<RouteStep> &steps)
