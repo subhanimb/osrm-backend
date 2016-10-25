@@ -57,6 +57,12 @@ class IntersectionGenerator
     // The resulting candidates have to be analysed for their actual instructions later on.
     OSRM_ATTR_WARN_UNUSED
     Intersection GetConnectedRoads(const NodeID from_node, const EdgeID via_eid) const;
+  private:
+    const util::NodeBasedDynamicGraph &node_based_graph;
+    const RestrictionMap &restriction_map;
+    const std::unordered_set<NodeID> &barrier_nodes;
+    const std::vector<QueryNode> &node_info_list;
+    const CoordinateExtractor coordinate_extractor;
 
   private:
     const util::NodeBasedDynamicGraph &node_based_graph;
