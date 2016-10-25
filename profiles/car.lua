@@ -624,20 +624,22 @@ function turn_function (turn)
   -- over the space of 0-180 degrees.  Values here were chosen by fitting
   -- the function to some turn penalty samples from real driving.
   -- multiplying by 10 converts to deci-seconds see issue #1318
-  if turn.angle >= 0 then
-    turn.duration = turn_penalty / (1 + math.exp( -((13 / turn_bias) *  turn.angle/180 - 6.5*turn_bias)))
-  else
-    turn.duration = turn_penalty / (1 + math.exp( -((13 * turn_bias) * -turn.angle/180 - 6.5/turn_bias)))
-  end
+  if turn.turn_type ~= turn_type.no_turn then
+    if turn.angle >= 0 then
+      turn.duration = turn_penalty / (1 + math.exp( -((13 / turn_bias) *  turn.angle/180 - 6.5*turn_bias)))
+    else
+      turn.duration = turn_penalty / (1 + math.exp( -((13 * turn_bias) * -turn.angle/180 - 6.5/turn_bias)))
+    end
 
-  if turn.is_uturn then
-    turn.duration = turn.duration + uturn_penalty
-  end
+    if turn.direction_modifier == direction_modifier.uturn then
+      turn.duration = turn.duration + uturn_penalty
+    end
 
-  -- for distance based routing we don't want to have penalties based on turn angle
-  if properties.weight_name == 'distance' then
-     turn.weight = 0
-  else
-     turn.weight = turn.duration
+    -- for distance based routing we don't want to have penalties based on turn angle
+    if properties.weight_name == 'distance' then
+       turn.weight = 0
+    else
+       turn.weight = turn.duration
+    end
   end
 end

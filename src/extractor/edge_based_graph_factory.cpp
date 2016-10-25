@@ -484,8 +484,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 }
 
                 ExtractionTurn extracted_turn(180. - turn.angle,
-                                              turn.instruction.direction_modifier ==
-                                                  guidance::DirectionModifier::UTurn);
+                                              turn.instruction.type, turn.instruction.direction_modifier);
                 scripting_environment.ProcessTurn(extracted_turn);
 
                 // TODO port this to the turn function

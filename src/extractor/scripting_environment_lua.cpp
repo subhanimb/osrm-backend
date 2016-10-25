@@ -216,9 +216,48 @@ void LuaScriptingEnvironment::InitContext(LuaScriptingContext &context)
              .property("lat", &latToDouble<util::Coordinate>),
          luabind::class_<ExtractionTurn>("Turn")
              .def_readonly("angle", &ExtractionTurn::angle)
-             .def_readonly("is_uturn", &ExtractionTurn::is_uturn)
+             .def_readonly("turn_type", &ExtractionTurn::turn_type)
+             .def_readonly("direction_modifier", &ExtractionTurn::direction_modifier)
              .def_readwrite("weight", &ExtractionTurn::weight)
              .def_readwrite("duration", &ExtractionTurn::duration),
+         luabind::class_<guidance::TurnType::Enum>("turn_type").enum_("enums")[
+             luabind::value("invalid", extractor::guidance::TurnType::Invalid),
+             luabind::value("new_name", extractor::guidance::TurnType::NewName),
+             luabind::value("continue", extractor::guidance::TurnType::Continue),
+             luabind::value("turn", extractor::guidance::TurnType::Turn),
+             luabind::value("merge", extractor::guidance::TurnType::Merge),
+             luabind::value("on_ramp", extractor::guidance::TurnType::OnRamp),
+             luabind::value("off_ramp", extractor::guidance::TurnType::OffRamp),
+             luabind::value("fork", extractor::guidance::TurnType::Fork),
+             luabind::value("end_of_road", extractor::guidance::TurnType::EndOfRoad),
+             luabind::value("notification", extractor::guidance::TurnType::Notification),
+             luabind::value("enter_roundabout", extractor::guidance::TurnType::EnterRoundabout),
+             luabind::value("enter_and_exit_roundabout", extractor::guidance::TurnType::EnterAndExitRoundabout),
+             luabind::value("enter_rotary", extractor::guidance::TurnType::EnterRotary),
+             luabind::value("enter_and_exit_rotary", extractor::guidance::TurnType::EnterAndExitRotary),
+             luabind::value("enter_roundabout_intersection", extractor::guidance::TurnType::EnterRoundaboutIntersection),
+             luabind::value("enter_and_exit_roundabout_intersection", extractor::guidance::TurnType::EnterAndExitRoundaboutIntersection),
+             luabind::value("use_lane", extractor::guidance::TurnType::UseLane),
+             luabind::value("no_turn", extractor::guidance::TurnType::NoTurn),
+             luabind::value("suppressed", extractor::guidance::TurnType::Suppressed),
+             luabind::value("enter_roundabout_at_exit", extractor::guidance::TurnType::EnterRoundaboutAtExit),
+             luabind::value("exit_roundabout", extractor::guidance::TurnType::ExitRoundabout),
+             luabind::value("enter_rotary_at_exit", extractor::guidance::TurnType::EnterRotaryAtExit),
+             luabind::value("exit_rotary", extractor::guidance::TurnType::ExitRotary),
+             luabind::value("enter_roundabout_intersection_at_exit", extractor::guidance::TurnType::EnterRoundaboutIntersectionAtExit),
+             luabind::value("exit_roundabout_intersection", extractor::guidance::TurnType::ExitRoundaboutIntersection),
+             luabind::value("stay_on_roundabout", extractor::guidance::TurnType::StayOnRoundabout),
+             luabind::value("max_turn_type", extractor::guidance::TurnType::MaxTurnType)
+         ],
+         luabind::class_<guidance::DirectionModifier::Enum>("direction_modifier").enum_("enums")[
+             luabind::value("uturn", extractor::guidance::DirectionModifier::UTurn),
+             luabind::value("sharp_right", extractor::guidance::DirectionModifier::SharpRight),
+             luabind::value("right", extractor::guidance::DirectionModifier::Right),
+             luabind::value("slight_right", extractor::guidance::DirectionModifier::SlightRight),
+             luabind::value("left", extractor::guidance::DirectionModifier::Left),
+             luabind::value("sharp_left", extractor::guidance::DirectionModifier::SharpLeft),
+             luabind::value("max_direction_modifier", extractor::guidance::DirectionModifier::MaxDirectionModifier)
+         ],
          luabind::class_<RasterDatum>("RasterDatum")
              .def_readonly("datum", &RasterDatum::datum)
              .def("invalid_data", &RasterDatum::get_invalid)];
