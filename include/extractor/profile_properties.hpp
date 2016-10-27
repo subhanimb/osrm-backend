@@ -8,10 +8,12 @@ namespace osrm
 namespace extractor
 {
 
+const constexpr auto DEFAULT_MAX_SPEED = 180 / 3.6; // 180kmph -> m/s
+
 struct ProfileProperties
 {
     ProfileProperties()
-        : traffic_signal_penalty(0), u_turn_penalty(0), max_speed_for_map_matching(180/3.6),
+        : traffic_signal_penalty(0), u_turn_penalty(0), max_speed_for_map_matching(DEFAULT_MAX_SPEED),
         continue_straight_at_waypoint(true), use_turn_restrictions(false), left_hand_driving(false)
     {
     }
@@ -30,11 +32,11 @@ struct ProfileProperties
         traffic_signal_penalty = boost::numeric_cast<int>(traffic_signal_penalty_ * 10.);
     }
 
-    double GetMaxSpeedForMapMatching() const { return max_speed_for_map_matching; } // /3.6 converts kmph to m/s
+    double GetMaxSpeedForMapMatching() const { return max_speed_for_map_matching; }
 
     void SetMaxSpeedForMapMatching(const double max_speed_for_map_matching_) 
     {
-        max_speed_for_map_matching = boost::numeric_cast<int>(max_speed_for_map_matching_);  // *3.6 converts  m/s to kmph
+        max_speed_for_map_matching = max_speed_for_map_matching_;
     }
 
     //! penalty to cross a traffic light in deci-seconds

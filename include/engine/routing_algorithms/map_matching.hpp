@@ -33,7 +33,6 @@ using HMM = map_matching::HiddenMarkovModel<CandidateLists>;
 using SubMatchingList = std::vector<map_matching::SubMatching>;
 
 constexpr static const unsigned MAX_BROKEN_STATES = 10;
-constexpr static const double MAX_SPEED = 180 / 3.6; // 180km -> m/s
 static const constexpr double MATCHING_BETA = 10;
 constexpr static const double MAX_DISTANCE_DELTA = 2000.;
 

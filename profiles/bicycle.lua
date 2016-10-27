@@ -94,7 +94,7 @@ surface_speeds = {
 -- these need to be global because they are accesed externaly
 properties.traffic_signal_penalty        = 2
 properties.u_turn_penalty                = 20
-properties.max_speed_for_map_matching    = 30/3.6 -- 15.5 km/h is the average speed
+properties.max_speed_for_map_matching    = 110/3.6 -- kmph -> m/s
 properties.use_turn_restrictions         = false
 properties.continue_straight_at_waypoint = false
 
