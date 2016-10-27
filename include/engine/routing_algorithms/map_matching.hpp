@@ -99,10 +99,8 @@ class MapMatching final : public BasicRoutingInterface<DataFacadeT, MapMatching<
         const auto max_distance_delta = [&] {
             if (use_timestamps)
             {
-                std::cout << "facade.GetMapMatchingMaxSpeed()" << std::endl;
-                std::cout << facade.GetMapMatchingMaxSpeed() << std::endl;
-                std::cout << "median_sample_time" << std::endl;
-                std::cout << median_sample_time << std::endl;
+                std::cout << "facade.GetMapMatchingMaxSpeed(): " << facade.GetMapMatchingMaxSpeed() << std::endl;
+                std::cout << "median_sample_time: " << median_sample_time << std::endl;
                 return median_sample_time * facade.GetMapMatchingMaxSpeed();
             }
             else
@@ -243,16 +241,24 @@ class MapMatching final : public BasicRoutingInterface<DataFacadeT, MapMatching<
             const int duration_upper_bound =
                 ((haversine_distance + max_distance_delta) * 0.25) * 10;
 
+            std::cout << "t: " << t << std::endl;
+
             // compute d_t for this timestamp and the next one
             for (const auto s : util::irange<std::size_t>(0UL, prev_viterbi.size()))
             {
+                std::cout << "s: " << s << std::endl;
+
                 if (prev_pruned[s])
                 {
+                    std::cout << "prev_pruned[s] === true" << std::endl;
                     continue;
                 }
 
                 for (const auto s_prime : util::irange<std::size_t>(0UL, current_viterbi.size()))
                 {
+                    
+                    std::cout << "s_prime: " << s_prime << std::endl;
+
                     const double emission_pr = emission_log_probabilities[t][s_prime];
                     double new_value = prev_viterbi[s] + emission_pr;
                     if (current_viterbi[s_prime] > new_value)
@@ -263,10 +269,12 @@ class MapMatching final : public BasicRoutingInterface<DataFacadeT, MapMatching<
                     forward_heap.Clear();
                     reverse_heap.Clear();
 
+                    std::cout << "prev: " << prev_unbroken_timestamps_list[s].phantom_node << std::endl;
+                    std::cout << "current: " << current_timestamps_list[s_prime].phantom_node << std::endl;
+
                     double network_distance;
                     if (facade.GetCoreSize() > 0)
                     {
-                        std::cout << "if (facade.GetCoreSize() > 0) === true" << std::endl;
                         forward_core_heap.Clear();
                         reverse_core_heap.Clear();
                         network_distance = super::GetNetworkDistanceWithCore(
@@ -280,7 +288,7 @@ class MapMatching final : public BasicRoutingInterface<DataFacadeT, MapMatching<
                             duration_upper_bound);
                     }
                     else
-                    {   std::cout << "if (facade.GetCoreSize() > 0) === false" << std::endl;
+                    {   
                         network_distance = super::GetNetworkDistance(
                             facade,
                             forward_heap,
@@ -295,10 +303,8 @@ class MapMatching final : public BasicRoutingInterface<DataFacadeT, MapMatching<
                     // very low probability transition -> prune
                     if (d_t >= max_distance_delta)
                     {
-                        std::cout << "d_t" << std::endl;
-                        std::cout << d_t << std::endl;
-                        std::cout << "max_distance_delta" << std::endl;
-                        std::cout << max_distance_delta << std::endl;
+                        std::cout << "d_t: " << d_t << std::endl;
+                        std::cout << "max_distance_delta: " << max_distance_delta << std::endl;
                         continue;
                     }
 
@@ -307,6 +313,7 @@ class MapMatching final : public BasicRoutingInterface<DataFacadeT, MapMatching<
 
                     if (new_value > current_viterbi[s_prime])
                     {
+                        std::cout << "candidate has been found" << std::endl;
                         current_viterbi[s_prime] = new_value;
                         current_parents[s_prime] = std::make_pair(prev_unbroken_timestamp, s);
                         current_lengths[s_prime] = network_distance;
@@ -318,6 +325,7 @@ class MapMatching final : public BasicRoutingInterface<DataFacadeT, MapMatching<
 
             if (model.breakage[t])
             {
+                 std::cout << "model.breakage[t] is true" << std::endl;
                 // save start of breakage -> we need this as split point
                 if (t < breakage_begin)
                 {

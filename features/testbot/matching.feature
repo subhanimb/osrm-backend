@@ -167,20 +167,25 @@ Feature: Basic Map Matching
             | bd    | no     |
 
         When I match I should get
-            | trace | matchings | geometry                                |
+            | trace | matchings | geometry                                   |
             | abd   | abd       | 1,1,1.000089,1,1.000089,1,1.000089,0.99991 |
 
     Scenario: Testbot - Speed greater than speed threshhold, should split -- returns trace as abcd but should be split into ab,cd
         Given a grid size of 10 meters
+        Given the query options
+            | geometries | geojson  |
+
         Given the node map
             """
-            a b              c d
-                             e
+            a b ---- x
+                     |
+                     |
+                     y --- c d
             """
 
         And the ways
-            | nodes | oneway |
-            | abcd  | no     |
+            | nodes   | oneway |
+            | abxycd  | no     |
 
         When I match I should get
             | trace | timestamps | matchings |
@@ -188,6 +193,9 @@ Feature: Basic Map Matching
 
     Scenario: Testbot - Speed less than speed threshhold, should not split  
         Given a grid size of 10 meters
+        Given the query options
+            | geometries | geojson  |
+
         Given the node map
             """
             a b c d
