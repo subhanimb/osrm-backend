@@ -95,7 +95,7 @@ Feature: Basic Map Matching
             | trace | matchings |
             | dcba  | hgfe      |
 
-    Scenario: Testbot - Matching with oneway streets -- funky need to look into this more cloesly
+	Scenario: Testbot - Matching with oneway streets -- returns the correct trace but not broken up. also tracepoints names are weird
         Given a grid size of 10 meters
         Given the node map
             """
@@ -114,10 +114,10 @@ Feature: Basic Map Matching
 
         When I match I should get
             | trace | matchings |
-            | dcba  | hg,gf,fe  |
-            | efgh  | ab,bc,cd  |
+            | dcba  | hgfe  |
+            | efgh  | abcd  |
 
-    Scenario: Testbot - Duration details -- look into annotations property
+    Scenario: Testbot - Duration details -- returns incomplete matching even within tracepoints. matchings also obviously incomplete so not possible to fill in details in annotaion table. also, current table only has 3 properties, but new API returns 4 properties  
         Given the query options
             | annotations | true    |
 
@@ -150,7 +150,7 @@ Feature: Basic Map Matching
             | abeh  | abcedgh   | 1,2,3,2,3,4,5,4,5,6,7 |
             | abci  | abc,ci    | 1,2,3,2,3,8,3,8       |
 
-    Scenario: Testbot - Geometry details -- not sure what should be returned here
+    Scenario: Testbot - Geometry details -- precision problems
         Given the query options
             | overview   | full     |
             | geometries | geojson  |
@@ -170,7 +170,7 @@ Feature: Basic Map Matching
             | trace | matchings | geometry                                |
             | abd   | abd       | 1,1,1.00009,1,1.00009,1,1.00009,0.99991 |
 
-    Scenario: Testbot - Speed greater than speed threshhold, should split  -- returns abcd with last node chopped off
+    Scenario: Testbot - Speed greater than speed threshhold, should split -- returns trace as abcd but should be split into ab,cd
         Given a grid size of 10 meters
         Given the node map
             """
@@ -186,7 +186,7 @@ Feature: Basic Map Matching
             | trace | timestamps | matchings |
             | abcd  | 0 1 2 3    | ab,cd     |
 
-    Scenario: Testbot - Speed less than speed threshhold, should not split  -- returns abcd with last node chopped off
+    Scenario: Testbot - Speed less than speed threshhold, should not split  
         Given a grid size of 10 meters
         Given the node map
             """
