@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "extractor/guidance/turn_instruction.hpp"
+#include "util/guidance/toolkit.hpp"
 #include "util/typedefs.hpp" // EdgeID
 
 namespace osrm
@@ -59,7 +60,73 @@ struct ConnectedRoad final
 // small helper function to print the content of a connected road
 std::string toString(const ConnectedRoad &road);
 
-typedef std::vector<ConnectedRoad> Intersection;
+struct Intersection
+{
+    typedef std::vector<ConnectedRoad>::const_iterator const_iterator;
+    typedef std::vector<ConnectedRoad>::iterator iterator;
+
+    inline iterator begin() { return connected_roads.begin(); }
+    inline iterator end() { return connected_roads.end(); }
+
+    inline const_iterator begin() const { return connected_roads.begin(); }
+    inline const_iterator end() const { return connected_roads.end(); }
+
+    inline const_iterator cbegin() const { return connected_roads.cbegin(); }
+    inline const_iterator cend() const { return connected_roads.cend(); }
+
+    inline const ConnectedRoad &operator[](std::size_t index) const
+    {
+        return connected_roads[index];
+    }
+
+    inline ConnectedRoad &operator[](std::size_t index) { return connected_roads[index]; }
+
+    inline ConnectedRoad &front() { return connected_roads.front(); }
+    inline ConnectedRoad &back() { return connected_roads.back(); }
+
+    inline void pop_back() { connected_roads.pop_back(); }
+
+    inline iterator erase(iterator position) { return connected_roads.erase(position); }
+    inline iterator erase(iterator position, iterator end)
+    {
+        return connected_roads.erase(position, end);
+    }
+
+    inline void clear() { connected_roads.clear(); }
+    inline bool empty() const { return connected_roads.empty(); }
+    inline iterator insert(iterator position, const ConnectedRoad &road)
+    {
+        return connected_roads.insert(position, road);
+    }
+
+    std::size_t size() const { return connected_roads.size(); };
+    inline void push_back(const ConnectedRoad &road) { connected_roads.push_back(road); }
+
+    ConnectedRoad &at(std::size_t index) { return connected_roads.at(index); }
+    const ConnectedRoad &at(std::size_t index) const { return connected_roads.at(index); }
+
+    inline iterator findClosestTurn(double angle)
+    {
+        return std::min_element(connected_roads.begin(),
+                                connected_roads.end(),
+                                [angle](const ConnectedRoad &lhs, const ConnectedRoad &rhs) {
+                                    return util::guidance::angularDeviation(lhs.turn.angle, angle) <
+                                           util::guidance::angularDeviation(rhs.turn.angle, angle);
+                                });
+    }
+
+    inline const_iterator findClosestTurn(double angle) const
+    {
+        return std::min_element(connected_roads.begin(),
+                                connected_roads.end(),
+                                [angle](const ConnectedRoad &lhs, const ConnectedRoad &rhs) {
+                                    return util::guidance::angularDeviation(lhs.turn.angle, angle) <
+                                           util::guidance::angularDeviation(rhs.turn.angle, angle);
+                                });
+    }
+
+    std::vector<ConnectedRoad> connected_roads;
+};
 
 Intersection::const_iterator findClosestTurn(const Intersection &intersection, const double angle);
 Intersection::iterator findClosestTurn(Intersection &intersection, const double angle);
