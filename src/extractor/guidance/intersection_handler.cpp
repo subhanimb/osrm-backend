@@ -405,7 +405,7 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
 
     std::vector<out_way> out_ways(intersection.size());
 
-    for (std::size_t i = 1; i < intersection.size(); ++i)
+    for (std::size_t i = 1, last = intersection.size(); i < last; ++i)
     {
         out_way out{&intersection[i]};
         if (!intersection[i].entry_allowed)
@@ -428,17 +428,16 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
     }
 
     // sort out ways by what they share with the in way
+    // entry allowed, lowest deviation to greatest deviation, name, classification and priority
     const auto sort_by = [](const out_way &lhs, const out_way &rhs) {
-        auto left_tie = std::tie(lhs.entry_allowed,
-                                 lhs.same_name_id,
-                                 lhs.same_classification,
-                                 lhs.same_or_higher_priority);
-        auto right_tie = std::tie(rhs.entry_allowed,
-                                  rhs.same_name_id,
-                                  rhs.same_classification,
-                                  rhs.same_or_higher_priority);
-        return (left_tie > right_tie) ||
-               (left_tie == right_tie && lhs.deviation_from_straight < rhs.deviation_from_straight);
+        auto left_tie =
+            std::tie(lhs.same_name_id, lhs.same_classification, lhs.same_or_higher_priority);
+        auto right_tie =
+            std::tie(rhs.same_name_id, rhs.same_classification, rhs.same_or_higher_priority);
+        return lhs.entry_allowed > rhs.entry_allowed ||
+               (lhs.entry_allowed == rhs.entry_allowed &&
+                (lhs.deviation_from_straight < rhs.deviation_from_straight ||
+                 (left_tie > right_tie)));
     };
     std::stable_sort(begin(out_ways), end(out_ways), sort_by);
 
@@ -447,24 +446,19 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
     if (std::none_of(begin(out_ways), end(out_ways), allowed))
         return 0;
 
-    // no out ways share the same name as the approach street
-    if (!out_ways.front().same_name_id)
-    {
-        best = 1;
-    }
-    else
-    {
-        // potential obvious turn onto a way with the same name as in road is
-        // the first item in the sorted list
-        best_continue = 1;
-
-        const auto diff_name = [](const out_way &lhs) { return lhs.same_name_id != 0; };
-        auto first_non_continue = std::find_if(begin(out_ways), end(out_ways), diff_name);
-        if (first_non_continue != end(out_ways))
-        {
-            best = std::distance(begin(out_ways), first_non_continue);
-        }
-    }
+    best = 1;
+    std::size_t i = 0;
+    const auto last = out_ways.size();
+    const auto notLowPriority = [](const out_way &way) {
+        return !node_based_graph.GetEdgeData(way.road->turn.eid)
+                    .road_classification.isLowPriorityRoadClass();
+    };
+    const auto best_candidate = std::find_if(begin(out_ways), end(out_ways), notLowPriority);
+    best = best_candidate != end(best_candidate) ? best_candidate : 0;
+    if (best_ == 0)
+        return 0;
+    const auto same_name = [](const out_way &lhs) { return lhs.same_name_id == true; };
+    best_continue = std::find_if(begin(out_ways), end(out_ways), same_name);
 
     // get a count of number of ways from that intersection that would use the
     // continue instruction because they have the same name as the street
@@ -476,9 +470,15 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
             ++count;
             if (out_ways[i].entry_allowed)
                 ++count_valid;
+            ++i;
         }
         return std::make_pair(count, count_valid);
     }();
+
+    // no out ways share the same name as the approach street
+    // out_way sorted to have the highest road class is the next best bet
+    if (num_continue_names.first == 0)
+        best_continue = 0;
 
     // if the best angle is going straight but the road is turning, declare no obvious turn
     if (0 != best_continue && best != best_continue &&
